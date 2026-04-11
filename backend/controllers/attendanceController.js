@@ -1,5 +1,6 @@
 import Attendance from "../models/Attendance.js";
 import Schedule from "../models/Schedule.js";
+import Enrollment from "../models/Enrollment.js";
 
 export const scanAttendance = async (req, res) => {
 
@@ -23,6 +24,17 @@ export const scanAttendance = async (req, res) => {
       student: req.user._id,
       schedule: scheduleId
     });
+
+    const isEnrolled = await Enrollment.findOne({
+        student: req.user._id,
+        course: schedule.course
+      });
+
+      if (!isEnrolled) {
+        return res.status(403).json({
+          message: "You are not enrolled in this course"
+        });
+      }
 
     if (existing) {
       return res.status(400).json({ message: "Attendance already recorded" });

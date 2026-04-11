@@ -113,10 +113,11 @@ export const returnAsset = async (req, res) => {
 
     log.returnedAt = new Date();
     log.conditionOnReturn = condition;
+    log.approvedReturn = false;
 
     await log.save();
 
-    asset.status = "available";
+    asset.status = "pending";
     await asset.save();
 
     res.json({
@@ -128,4 +129,22 @@ export const returnAsset = async (req, res) => {
     res.status(500).json(error.message);
   }
 
+};
+
+export const approveReturn = async (req, res) => {
+  const { logId } = req.body;
+
+  const log = await AssetLog.findById(logId).populate("asset");
+
+  if (!log) {
+    return res.status(404).json({ message: "log not found "});
+  }
+
+  log.approvedReturn = true;
+  await log.save();
+
+  log.asset.status = "available"
+  await log.asset.save();
+
+  res.json({ message: "Return approved" });
 };

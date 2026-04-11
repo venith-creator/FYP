@@ -9,7 +9,12 @@ const assetLogSchema = new mongoose.Schema(
 
     student: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
+      ref: "User",
+    },
+
+    approvedReturn: {
+      type: Boolean,
+      default: false
     },
 
     borrowedAt: Date,

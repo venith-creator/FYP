@@ -8,14 +8,23 @@ import generateStudentId from "../utils/generateStudentId.js";
 
 export const adminSignup = async (req, res) => {
 
-  const { name, password } = req.body;
+  const { name, password, email, secret } = req.body;
+
+  if (secret !== process.env.ADMIN_SECRET) {
+    return res.status(403).json({ message: "Invalid secret code" });
+  }
 
   try {
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ message: "Admin already exists" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const admin = await User.create({
       name,
+      email,
       password: hashedPassword,
       role: "admin"
     });
@@ -30,17 +39,19 @@ export const adminSignup = async (req, res) => {
 
 };
 
-
-
 // LOGIN (students + admins)
 
 export const loginUser = async (req, res) => {
-
-  const { studentId, password } = req.body;
+  const { studentId, email, password } = req.body;
 
   try {
+    let user;
 
-    const user = await User.findOne({ studentId });
+    if (email) {
+      user = await User.findOne({ email });
+    } else {
+      user = await User.findOne({ studentId });
+    }
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -54,11 +65,10 @@ export const loginUser = async (req, res) => {
 
     res.json({
       token: generateToken(user._id, user.role),
-      user
+      user,
     });
 
   } catch (error) {
     res.status(500).json(error.message);
   }
-
 };

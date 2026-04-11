@@ -7,6 +7,11 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true, // allows null for admins
     },
+    email: {
+      type: String,
+      unique: true,
+      sparse: true, // allows null for students
+    },
     name: {
       type: String,
       required: true,
