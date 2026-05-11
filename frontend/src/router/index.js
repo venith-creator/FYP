@@ -11,6 +11,7 @@ import AdminStudents from '@/views/AdminStudents.vue'
 import AdminCourses from '@/views/AdminCourses.vue'
 import AdminAttendance from '@/views/AdminAttendance.vue'
 import AdminAssets from '@/views/AdminAssets.vue'
+import AdminSchedule from '@/views/AdminSchedule.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -32,7 +33,8 @@ const router = createRouter({
     { path: "/admin/students", component: AdminStudents},
     { path: "/admin/Courses", component: AdminCourses},
     { path: "/admin/attendance", component: AdminAttendance },
-    { path: "/admin/assets", component: AdminAssets}
+    { path: "/admin/assets", component: AdminAssets },
+    { path: "/admin/schedule", component: AdminSchedule}
   ],
 })
 

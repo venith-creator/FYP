@@ -3,12 +3,15 @@ import {
   createAsset,
   borrowAsset,
   returnAsset,
-  approveReturn
+  approveReturn,
+  getAssets
 } from "../controllers/assetController.js";
 
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+
+router.get("/", protect, adminOnly, getAssets)
 
 router.post("/create", protect, adminOnly, createAsset);
 

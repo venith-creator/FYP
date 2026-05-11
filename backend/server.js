@@ -12,6 +12,7 @@ import scheduleRoutes from "./routes/scheduleRoutes.js";
 import assetRoutes from "./routes/assetRoutes.js"
 import courseRoutes from "./routes/courseRoutes.js"
 import studentRoutes from "./routes/studentRoutes.js"
+import sessionRoutes from "./routes/sessionRoutes.js"
 
 connectDB();
 
@@ -27,6 +28,7 @@ app.use("/api/schedule", scheduleRoutes);
 app.use("/api/assets", assetRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/student", studentRoutes);
+app.use("/api/session", sessionRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Backend API running..." });

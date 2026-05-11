@@ -65,10 +65,14 @@ export const borrowAsset = async (req, res) => {
         });
         }
 
+    const dueDate = newDate();
+    dueDate.setDate(dueDate.getDate() + 7); // 7 days    
+
     const log = await AssetLog.create({
       asset: asset._id,
       student: req.user._id,
-      borrowedAt: new Date()
+      borrowedAt: new Date(),
+      dueDate
     });
 
     asset.status = "borrowed";
@@ -147,4 +151,13 @@ export const approveReturn = async (req, res) => {
   await log.asset.save();
 
   res.json({ message: "Return approved" });
+};
+
+export const getAssets = async (req, res) => {
+  try {
+    const assets = await Asset.find().sort({ createdAt: -1 });
+    res.json(assets);
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
 };

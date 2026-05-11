@@ -18,6 +18,16 @@ const showLogsModal = ref(false);
 const selectedAssetLogs = ref([]);
 const selectedAsset = ref(null);
 
+const isOverdue = (log) => {
+  if (!log || log.returnedAt) return false;
+
+  const borrowedTime = new Date(log.borrowedAt).getTime();
+  const now = Date.now();
+
+  const days = (now - borrowedTime) / (1000 * 60 * 60 * 24);
+
+  return days > 7; // 7 days rule
+};
 // ---------------- FETCH ----------------
 
 const fetchAssets = async () => {
@@ -50,6 +60,7 @@ const createAsset = async () => {
 
     // add instantly to UI
     assets.value.unshift(res.data);
+    downloadQR(res.data.qrCode, res.data.assetTag);
 
     // reset
     assetName.value = "";
@@ -59,6 +70,16 @@ const createAsset = async () => {
   } catch (err) {
     console.log(err);
   }
+};
+
+const showAssetDetail = ref(false);
+
+const openAssetDetail = (asset) => {
+  selectedAsset.value = asset;
+  selectedAssetLogs.value = logs.value.filter(
+    l => l.asset?._id === asset._id
+  );
+  showAssetDetail.value = true;
 };
 
 // ---------------- COMPUTED ----------------
@@ -82,7 +103,7 @@ const filteredAssets = computed(() => {
 const getCurrentHolder = (assetId) => {
   return logs.value.find(
     l => l.asset?._id === assetId && !l.returnedAt
-  );
+  ) || null;
 };
 
 // ---------------- ACTIONS ----------------
@@ -209,9 +230,16 @@ const downloadQR = (qr, tag) => {
 
               <!-- HOLDER -->
               <td class="p-4 text-sm">
-                <span v-if="getCurrentHolder(asset._id)">
-                  {{ getCurrentHolder(asset._id).student?.name }}
-                </span>
+                  <template v-if="getCurrentHolder(asset._id)">
+                    {{ getCurrentHolder(asset._id)?.student?.name }}
+
+                    <span
+                    v-if="isOverdue(getCurrentHolder(asset._id))"
+                    class="text-red-500 text-xs ml-2"
+                    >
+                    🔴 Overdue
+                    </span>
+                </template>
                 <span v-else class="text-gray-500">
                   In Store
                 </span>
@@ -250,6 +278,13 @@ const downloadQR = (qr, tag) => {
                   class="bg-green-600 px-3 py-1 rounded"
                 >
                   Approve
+                </button>
+
+                <button
+                @click="openAssetDetail(asset)"
+                class="bg-purple-600 px-3 py-1 rounded"
+                >
+                Details
                 </button>
 
               </td>
@@ -366,6 +401,42 @@ const downloadQR = (qr, tag) => {
             </div>
 
         </div>
+        </div>
+
+        <div v-if="showAssetDetail" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center">
+
+        <div class="bg-gray-900 p-6 rounded-xl w-full max-w-3xl">
+
+            <h2 class="text-xl mb-4">{{ selectedAsset?.name }} Analytics</h2>
+
+            <p>Total Borrows: {{ selectedAssetLogs.length }}</p>
+
+            <p>
+            Last Borrower:
+            {{
+                selectedAssetLogs[selectedAssetLogs.length - 1]?.student?.name || "None"
+            }}
+            </p>
+
+            <div class="mt-4">
+            <h3 class="text-lg">Condition History</h3>
+
+            <div v-for="log in selectedAssetLogs" :key="log._id">
+                <p class="text-sm">
+                {{ log.conditionOnReturn || "No condition recorded" }}
+                </p>
+            </div>
+            </div>
+
+            <button
+            @click="showAssetDetail = false"
+            class="mt-4 bg-gray-700 px-4 py-2 rounded"
+            >
+            Close
+            </button>
+
+        </div>
+
         </div>
 
 </div>

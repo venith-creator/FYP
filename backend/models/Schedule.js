@@ -13,7 +13,11 @@ const scheduleSchema = new mongoose.Schema({
 
   qrCode: String,
 
-  qrExpiresAt: Date
+  qrExpiresAt: Date,
+
+  sessionCode: String,  
+  sessionActive: Boolean,
+  sessionNote: String 
 });
 
 export default mongoose.model("Schedule", scheduleSchema);

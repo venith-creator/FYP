@@ -1,4 +1,6 @@
 import Course from "../models/Course.js";
+import Enrollment from "../models/Enrollment.js";
+import Attendance from "../models/Attendance.js";
 
 export const createCourse = async (req, res) => {
 
@@ -36,4 +38,30 @@ export const getCourses = async (req, res) => {
     res.status(500).json(error.message);
   }
 
+};
+
+export const getCourseStats = async (req, res) => {
+  const { courseId } = req.params;
+
+  try {
+    const totalStudents = await Enrollment.countDocuments({
+      course: courseId
+    });
+
+    const totalAttendance = await Attendance.countDocuments({
+      course: courseId
+    });
+
+    res.json({
+      totalStudents,
+      totalAttendance,
+      percentage:
+        totalStudents > 0
+          ? (totalAttendance / totalStudents) * 100
+          : 0
+    });
+
+  } catch (err) {
+    res.status(500).json(err.message);
+  }
 };

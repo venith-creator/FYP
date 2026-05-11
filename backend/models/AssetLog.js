@@ -21,7 +21,8 @@ const assetLogSchema = new mongoose.Schema(
 
     returnedAt: Date,
 
-    conditionOnReturn: String
+    conditionOnReturn: String,
+    dueDate: Date
   },
   { timestamps: true }
 );

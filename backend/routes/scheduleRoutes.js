@@ -1,6 +1,7 @@
 import express from "express";
-import { generateAttendanceQR, createSchedule } from "../controllers/scheduleController.js";
+import { generateSessionQR, createSchedule } from "../controllers/scheduleController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
+import Schedule from "../models/Schedule.js"
 
 const router = express.Router();
 
@@ -10,6 +11,6 @@ router.get("/", protect, adminOnly, async (req, res) => {
 });
 
 router.post("/create", protect, adminOnly, createSchedule);
-router.post("/generate-qr", protect, adminOnly, generateAttendanceQR);
+router.post("/generate-session-qr", protect, adminOnly, generateSessionQR);
 
 export default router;

@@ -21,6 +21,11 @@ const attendanceSchema = new mongoose.Schema(
       type: String,
       enum: ["present", "late"],
       default: "present"
+    },
+
+    session: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Session"
     }
   },
   { timestamps: true }
