@@ -82,6 +82,47 @@ const openAssetDetail = (asset) => {
   showAssetDetail.value = true;
 };
 
+const approveBorrow = async (logId) => {
+
+  if (!logId) return;
+
+  await API.post(
+    "/assets/approve-borrow",
+    { logId }
+  );
+
+  await fetchAssets();
+  await fetchLogs();
+};
+
+const rejectBorrow = async (logId) => {
+
+  await API.post(
+    "/assets/reject-borrow",
+    {
+      logId,
+      note: "Rejected by admin"
+    }
+  );
+
+  fetchAssets();
+  fetchLogs();
+};
+
+const rejectReturn = async (logId) => {
+
+  await API.post(
+    "/assets/reject-return",
+    {
+      logId,
+      note: "Asset condition issue"
+    }
+  );
+
+  fetchAssets();
+  fetchLogs();
+};
+
 // ---------------- COMPUTED ----------------
 
 // Filter + Search
@@ -102,7 +143,9 @@ const filteredAssets = computed(() => {
 // Current holder
 const getCurrentHolder = (assetId) => {
   return logs.value.find(
-    l => l.asset?._id === assetId && !l.returnedAt
+    l => l.asset?._id === assetId && 
+    l.approvedBorrow &&
+    !l.approvedReturn
   ) || null;
 };
 
@@ -178,7 +221,13 @@ const downloadQR = (qr, tag) => {
           <option value="all">All</option>
           <option value="available">Available</option>
           <option value="borrowed">Borrowed</option>
-          <option value="pending">Pending</option>
+          <option value="pending-borrow">
+            Pending Borrow
+            </option>
+
+            <option value="pending-return">
+            Pending Return
+            </option>
         </select>
       </div>
 
@@ -214,19 +263,48 @@ const downloadQR = (qr, tag) => {
               </td>
 
               <!-- STATUS -->
-              <td class="p-4">
-                <span v-if="asset.status === 'available'" class="text-green-400">
-                  Available
+             <td class="p-4">
+
+                <span
+                    v-if="asset.status === 'available'"
+                    class="text-green-400"
+                >
+                    Available
                 </span>
 
-                <span v-else-if="asset.status === 'borrowed'" class="text-red-400">
-                  Borrowed
+                <span
+                    v-else-if="asset.status === 'borrowed'"
+                    class="text-red-400"
+                >
+                    Borrowed
                 </span>
 
-                <span v-else class="text-yellow-400">
-                  Pending Approval
+                <span
+                    v-else-if="
+                    asset.status === 'pending-borrow'
+                    "
+                    class="text-blue-400"
+                >
+                    Pending Borrow
                 </span>
-              </td>
+
+                <span
+                    v-else-if="
+                    asset.status === 'pending-return'
+                    "
+                    class="text-yellow-400"
+                >
+                    Pending Return
+                </span>
+
+                <span
+                    v-else
+                    class="text-gray-400"
+                >
+                    Maintenance
+                </span>
+
+                </td>
 
               <!-- HOLDER -->
               <td class="p-4 text-sm">
@@ -279,6 +357,76 @@ const downloadQR = (qr, tag) => {
                 >
                   Approve
                 </button>
+
+                <div
+                    v-if="
+                        asset.status === 'pending-borrow'
+                    "
+                    class="flex flex-col gap-2"
+                    >
+
+                    <button
+                        @click="approveBorrow(
+                        logs.find(
+                            l =>
+                            l.asset?._id === asset._id &&
+                            !l.approvedBorrow && !l.borrowRejected
+                        )?._id
+                        )"
+                        class="bg-blue-600 px-3 py-1 rounded"
+                    >
+                        Approve Borrow
+                    </button>
+
+                    <button
+                        @click="rejectBorrow(
+                        logs.find(
+                            l =>
+                            l.asset?._id === asset._id &&
+                            !l.approvedBorrow && !l.borrowRejected
+                        )?._id
+                        )"
+                        class="bg-red-600 px-3 py-1 rounded"
+                    >
+                        Reject Borrow
+                    </button>
+
+                    <div
+                        v-if="
+                            asset.status === 'pending-return'
+                        "
+                        class="flex flex-col gap-2"
+                        >
+
+                        <button
+                            @click="approveReturn(
+                            logs.find(
+                                l =>
+                                l.asset?._id === asset._id &&
+                                !l.approvedReturn && !l.returnRejected
+                            )?._id
+                            )"
+                            class="bg-green-600 px-3 py-1 rounded"
+                        >
+                            Approve Return
+                        </button>
+
+                        <button
+                            @click="rejectReturn(
+                            logs.find(
+                                l =>
+                                l.asset?._id === asset._id &&
+                                !l.approvedReturn && !l.returnRejected
+                            )?._id
+                            )"
+                            class="bg-red-600 px-3 py-1 rounded"
+                        >
+                            Reject Return
+                        </button>
+
+                        </div>
+
+                    </div>
 
                 <button
                 @click="openAssetDetail(asset)"
@@ -345,6 +493,33 @@ const downloadQR = (qr, tag) => {
         >
           Approve Return
         </button>
+        <p
+            v-if="log.conditionOnReturn"
+            class="text-orange-400 text-sm mt-1"
+            >
+            Condition:
+            {{ log.conditionOnReturn }}
+            </p>
+            <p
+        v-if="log.borrowRejected"
+        class="text-red-400 text-xs mt-1"
+        >
+        Borrow Rejected
+        </p>
+
+        <p
+        v-if="log.returnRejected"
+        class="text-red-400 text-xs mt-1"
+        >
+        Return Rejected
+        </p>
+
+        <p
+        v-if="log.approvedBorrow"
+        class="text-green-400 text-xs mt-1"
+        >
+        Borrow Approved
+        </p>
       </div>
 
       <button

@@ -7,6 +7,7 @@ import Header from "../components/admin/Header.vue";
 
 // icons
 import {
+  PencilSquareIcon,
   UserPlusIcon,
   ClipboardDocumentListIcon,
   CubeIcon
@@ -37,7 +38,15 @@ const showOverviewModal = ref(false);
 const overviewData = ref({
   courses: [],
   attendance: [],
-  assets: []
+  assets: [],
+  summary: [],
+  upcoming: [],
+  analytics: {
+     totalAttendance: 0,
+    upcomingClasses: 0,
+    totalCourses: 0,
+    overallPercentage: 0
+  }
 });
 
 // selected
@@ -52,6 +61,8 @@ const assetLogs = ref([]);
 const name = ref("");
 const department = ref("");
 const level = ref("");
+const email = ref("");
+const formMode = ref("create");
 
 // ---------------- FETCH ----------------
 
@@ -71,21 +82,48 @@ onMounted(() => {
 });
 
 // ---------------- CREATE ----------------
+const saveStudent = async () => {
 
-const createStudent = async () => {
-  const res = await API.post("/admin/create-student", {
-    name: name.value,
-    department: department.value,
-    level: level.value
-  });
+  if (formMode.value === "create") {
 
-  students.value.unshift(res.data.student);
+    const res = await API.post("/admin/create-student", {
+      name: name.value,
+      department: department.value,
+      level: level.value,
+      email: email.value
+    });
+
+    students.value.unshift(res.data.student);
+
+  } else {
+
+    const res = await API.put(
+      `/admin/student/${selectedStudent.value._id}`,
+      {
+        name: name.value,
+        department: department.value,
+        level: level.value,
+        email: email.value
+      }
+    );
+
+    const index = students.value.findIndex(
+      s => s._id === res.data._id
+    );
+
+    if (index !== -1) {
+      students.value[index] = res.data;
+    }
+
+  }
 
   showModal.value = false;
 
   name.value = "";
   department.value = "";
   level.value = "";
+  email.value = "";
+
 };
 
 // ---------------- ASSIGN COURSES ----------------
@@ -107,7 +145,7 @@ const assignCourses = async () => {
 
 // ---------------- VIEW ATTENDANCE ----------------
 const viewAttendance = async (student) => {
-  const res = await API.get(`/admin/course-attendance/${student._id}`);
+  const res = await API.get("/attendance/all");
 
   attendanceRecords.value = res.data.filter(
     r => r.student?._id === student._id
@@ -144,6 +182,37 @@ const openStudentOverview = async (student) => {
   }
 };
 
+const openCreateModal = () => {
+  formMode.value = "create";
+
+  selectedStudent.value = null;
+
+  name.value = "";
+  department.value = "";
+  level.value = "";
+  email.value = "";
+
+  showModal.value = true;
+};
+
+const openEditModal = (student) => {
+
+  formMode.value = "edit";
+
+  selectedStudent.value = student;
+
+  name.value = student.name;
+
+  department.value = student.department;
+
+  level.value = student.level;
+
+  email.value = student.email || "";
+
+  showModal.value = true;
+
+};
+
 </script>
 
 <template>
@@ -165,7 +234,7 @@ const openStudentOverview = async (student) => {
           </div>
 
           <button
-            @click="showModal = true"
+            @click="openCreateModal"
             class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg"
           >
             + Add Student
@@ -192,6 +261,7 @@ const openStudentOverview = async (student) => {
                     <tr>
                     <th class="text-left p-4">Name</th>
                     <th class="text-left p-4">Student ID</th>
+                    <th class="text-left p-4">Email</th>
                     <th class="text-left p-4">Department</th>
                     <th class="text-left p-4">Level</th>
                     <th class="p-4">Actions</th>
@@ -216,6 +286,23 @@ const openStudentOverview = async (student) => {
                         {{ student.studentId }}
                     </td>
 
+                   <td class="p-4">
+
+                      <span
+                        v-if="student.email"
+                        class="text-green-400"
+                      >
+                        {{ student.email }}
+                      </span>
+
+                      <span
+                        v-else
+                        class="text-red-400 italic"
+                      >
+                        No email
+                      </span>
+
+                    </td>
                     <td class="p-4 text-gray-300">
                         {{ student.department }}
                     </td>
@@ -226,6 +313,20 @@ const openStudentOverview = async (student) => {
                         </span>
                     </td>
                     <td class="p-4 flex gap-4 items-center">
+
+                       <div class="flex flex-col items-center text-xs">
+                          <button
+                            @click="openEditModal(student)"
+                            class="p-2 bg-indigo-600 rounded hover:bg-indigo-700"
+                            title="Edit Student"
+                          >
+                            <PencilSquareIcon class="w-5 h-5" />
+                          </button>
+
+                          <span class="text-gray-400 mt-1">
+                            Edit
+                          </span>
+                        </div>
 
                         <!-- Assign -->
                         <div class="flex flex-col items-center text-xs">
@@ -287,10 +388,15 @@ const openStudentOverview = async (student) => {
       v-if="showModal"
       class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
     >
-      <div class="bg-gray-900 p-6 rounded-2xl w-full max-w-md space-y-4">
+      <div
+        class="bg-gray-900 p-6 rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto space-y-6"
+      >
 
         <div class="flex justify-between items-center">
-            <h2 class="text-xl font-semibold">Create Student</h2>
+            <h2 class="text-xl font-semibold"> {{ formMode === "create"
+                  ? "Create Student"
+                  : "Edit Student"
+              }}</h2>
             <button @click="closeAllModals" class="text-gray-400 hover:text-white">✕</button>
         </div>
 
@@ -303,13 +409,20 @@ const openStudentOverview = async (student) => {
         <input v-model="level" placeholder="Level"
           class="w-full p-3 bg-gray-800 rounded" />
 
+          <input
+              v-model="email"
+              type="email"
+              placeholder="Email"
+              class="w-full p-3 bg-gray-800 rounded"
+            />
+
         <div class="flex gap-3 pt-2">
           <button
-            @click="createStudent"
-            class="flex-1 bg-green-600 py-2 rounded"
-          >
-            Create
-          </button>
+              @click="saveStudent"
+              class="flex-1 bg-green-600 py-2 rounded"
+            >
+              {{ formMode === "create" ? "Create Student" : "Save Changes" }}
+            </button>
 
           <button
             @click="showModal = false"
@@ -420,7 +533,9 @@ const openStudentOverview = async (student) => {
         v-if="showOverviewModal"
         class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
         >
-        <div class="bg-gray-900 p-6 rounded-2xl w-full max-w-3xl space-y-6">
+        <div
+            class="bg-gray-900 p-6 rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto space-y-6"
+          >
 
             <!-- HEADER -->
             <div class="flex justify-between items-center">
@@ -446,24 +561,169 @@ const openStudentOverview = async (student) => {
             </div>
 
             <!-- ATTENDANCE -->
-            <div>
-            <h3 class="text-lg font-semibold mb-2 text-green-400">
-                Attendance
-            </h3>
+            <div class="grid grid-cols-4 gap-4">
 
-            <p class="text-sm text-gray-300">
-                Total Records: {{ overviewData.attendance.length }}
-            </p>
+                  <div class="bg-gray-800 rounded-xl p-4">
+                      <p class="text-gray-400 text-sm">
+                          Attendance
+                      </p>
 
-            <p class="text-sm text-gray-400">
-                Attendance %:
-                {{
-                overviewData.attendance.length > 0
-                    ? (overviewData.attendance.length * 10) + "%"
-                    : "0%"
-                }}
-            </p>
+                      <h2 class="text-3xl font-bold text-green-400">
+                          {{ overviewData.analytics.totalAttendance }}
+                      </h2>
+                  </div>
+
+                  <div class="bg-gray-800 rounded-xl p-4">
+                      <p class="text-gray-400 text-sm">
+                          Upcoming
+                      </p>
+
+                      <h2 class="text-3xl font-bold text-blue-400">
+                          {{ overviewData.analytics.upcomingClasses }}
+                      </h2>
+                  </div>
+
+                  <div class="bg-gray-800 rounded-xl p-4">
+                      <p class="text-gray-400 text-sm">
+                          Attendance %
+                      </p>
+
+                      <h2 class="text-3xl font-bold text-yellow-400">
+                          {{ overviewData.analytics.overallPercentage }}%
+                      </h2>
+                  </div>
+
+                  <div class="bg-gray-800 rounded-xl p-4">
+                      <p class="text-gray-400 text-sm">
+                          Courses
+                      </p>
+
+                      <h2 class="text-3xl font-bold text-purple-400">
+                          {{ overviewData.analytics.totalCourses }}
+                      </h2>
+                  </div>
+
+              </div>
+
+              <!-- Attendance Performance -->
+              <div class="mt-8">
+                <h3 class="text-lg font-semibold mb-4 text-green-400">
+                  Attendance Performance
+                </h3>
+
+                <div
+                  v-for="course in overviewData.summary"
+                  :key="course.course._id"
+                  class="mb-5"
+                >
+                  <div class="flex justify-between">
+                    <span>{{ course.course.courseCode }}</span>
+
+                    <span>{{ course.percentage }}%</span>
+                  </div>
+
+                  <div class="w-full bg-gray-800 rounded-full h-3 mt-2">
+                    <div
+                      class="bg-green-500 h-3 rounded-full"
+                      :style="{ width: course.percentage + '%' }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Upcoming Classes -->
+            <div class="mt-8">
+
+              <h3 class="text-lg font-semibold mb-4 text-blue-400">
+                Upcoming Classes
+              </h3>
+
+              <div
+                v-if="overviewData.upcoming.length"
+                class="grid md:grid-cols-2 gap-4"
+              >
+
+                <div
+                  v-for="session in overviewData.upcoming"
+                  :key="session._id"
+                  class="bg-gray-800 rounded-xl p-4"
+                >
+
+                  <p class="font-bold text-blue-400">
+                    {{ session.course.courseCode }}
+                  </p>
+
+                  <p>{{ session.course.courseTitle }}</p>
+
+                  <p class="text-sm text-gray-400">
+                    {{ new Date(session.date).toLocaleDateString() }}
+                  </p>
+
+                </div>
+
+              </div>
+
+              <p
+                v-else
+                class="text-gray-500"
+              >
+                No upcoming classes.
+              </p>
+
             </div>
+
+            <!-- Attendance History -->
+              <div class="mt-8">
+
+                <h3 class="text-lg font-semibold mb-4 text-green-400">
+                  Attendance History
+                </h3>
+
+                <div class="overflow-x-auto">
+
+                  <table class="w-full">
+
+                    <thead>
+
+                      <tr class="text-left border-b border-gray-700">
+                        <th class="py-2">Date</th>
+                        <th>Course</th>
+                        <th>Status</th>
+                      </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                      <tr
+                        v-for="record in overviewData.attendance"
+                        :key="record._id"
+                        class="border-b border-gray-800"
+                      >
+
+                        <td class="py-2">
+                          {{ new Date(record.createdAt).toLocaleDateString() }}
+                        </td>
+
+                        <td>
+                          {{ record.course.courseCode }}
+                        </td>
+
+                        <td>
+                          <span class="text-green-400">
+                            Present
+                          </span>
+                        </td>
+
+                      </tr>
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+
+              </div>
 
             <!-- ASSETS -->
             <div>

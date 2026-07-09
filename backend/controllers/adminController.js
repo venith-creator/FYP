@@ -1,15 +1,18 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import Session from "../models/Session.js";
 import generateStudentId from "../utils/generateStudentId.js";
 import Attendance from "../models/Attendance.js";
 import AssetLog from "../models/AssetLog.js";
 import Enrollment from "../models/Enrollment.js";
 import generatePassword from "../utils/generatePassword.js";
+import { sendEmail } from "../utils/email.js";
+import { studentWelcomeTemplate } from "../utils/emailTemplates.js";
 import { Parser } from "json2csv";
 
 export const createStudent = async (req, res) => {
 
-  const { name, department, level } = req.body;
+  const { name, department, level, email } = req.body;
 
   try {
 
@@ -24,10 +27,33 @@ export const createStudent = async (req, res) => {
       name,
       department,
       level,
+      email,
       studentId,
       password: hashedPassword,
       role: "student"
     });
+
+    if (email) {
+
+        await sendEmail({
+
+            to: email,
+
+            subject: "Your Student Account",
+
+            html: studentWelcomeTemplate({
+
+                name,
+
+                studentId,
+
+                password: plainPassword
+
+            })
+
+        });
+
+    }
 
     res.json({ student,
       credentials: {
@@ -48,6 +74,35 @@ export const getStudents = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json(students);
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+};
+
+export const updateStudent = async (req, res) => {
+  try {
+
+    const student = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        name: req.body.name,
+        email: req.body.email,
+        department: req.body.department,
+        level: req.body.level
+      },
+      { returnDocument: "after",
+        runValidators: true
+       }
+    );
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found"
+      });
+    }
+
+    res.json(student);
+
   } catch (error) {
     res.status(500).json(error.message);
   }
@@ -92,7 +147,7 @@ export const createMultipleStudents = async (req, res) => {
 
     for (let studentData of students) {
 
-      const { name, department, level } = studentData;
+      const { name, department, level, email } = studentData;
 
       const studentId = await generateStudentId(department);
 
@@ -106,10 +161,23 @@ export const createMultipleStudents = async (req, res) => {
         department,
         level,
         studentId,
+        email,
         password: hashedPassword,
         role: "student"
       });
 
+      if (email) {
+
+          await sendEmail({
+              to: email,
+              subject: "Your Student Account",
+              html: studentWelcomeTemplate({
+                  name,
+                  studentId,
+                  password: plainPassword
+              })
+          });
+      }
       results.push({
         name,
         studentId,
@@ -191,22 +259,106 @@ export const getStudentOverview = async (req, res) => {
   const { studentId } = req.params;
 
   try {
-    // 1. Attendance
-    const attendance = await Attendance.find({ student: studentId })
-      .populate("course", "courseCode courseTitle");
 
-    // 2. Assets
-    const assets = await AssetLog.find({ student: studentId })
-      .populate("asset");
+    // Enrollments + courses
+    const enrollments = await Enrollment.find({
+      student: studentId
+    }).populate("course");
 
-    // 3. Courses (from enrollment)
-    const enrollments = await Enrollment.find({ student: studentId })
-      .populate("course", "courseCode courseTitle");
+    // Attendance records
+    const attendance = await Attendance.find({
+      student: studentId
+    })
+      .populate("course", "courseCode courseTitle")
+      .populate({
+        path: "session",
+        populate: [
+          {
+            path: "course",
+            select: "courseCode courseTitle"
+          },
+          {
+            path: "schedule"
+          }
+        ]
+      })
+      .sort({ createdAt: -1 });
+
+    // Assets
+    const assets = await AssetLog.find({
+      student: studentId
+    }).populate("asset");
+
+    // Upcoming classes
+    const upcoming = await Session.find({
+      course: {
+        $in: enrollments.map(e => e.course._id)
+      },
+      date: {
+        $gte: new Date()
+      }
+    }).populate("course");
+
+    // Attendance summary per course
+    const summary = [];
+
+    for (const enrollment of enrollments) {
+
+      const totalSessions =
+        await Session.countDocuments({
+          course: enrollment.course._id
+        });
+
+      const attended =
+        await Attendance.countDocuments({
+          student: studentId,
+          course: enrollment.course._id
+        });
+
+      summary.push({
+        course: enrollment.course,
+        attended,
+        totalSessions,
+        percentage:
+          totalSessions === 0
+            ? 0
+            : Math.round(
+                (attended / totalSessions) * 100
+              )
+      });
+    }
+
+    // Analytics
+    const analytics = {
+      totalAttendance: attendance.length,
+
+      upcomingClasses: upcoming.length,
+
+      totalCourses: summary.length,
+
+      overallPercentage:
+        summary.length === 0
+          ? 0
+          : Math.round(
+              summary.reduce(
+                (sum, item) => sum + item.percentage,
+                0
+              ) / summary.length
+            )
+    };
 
     res.json({
+      courses: enrollments.map(e => e.course),
+
       attendance,
+
       assets,
-      courses: enrollments.map(e => e.course)
+
+      upcoming,
+
+      summary,
+
+      analytics
     });
 
   } catch (error) {

@@ -20,6 +20,26 @@ const assetLogSchema = new mongoose.Schema(
     borrowedAt: Date,
 
     returnedAt: Date,
+        approvedBorrow: {
+      type: Boolean,
+      default: false
+    },
+
+    borrowApprovedAt: Date,
+
+    returnApprovedAt: Date,
+
+    borrowRejected: {
+      type: Boolean,
+      default: false
+    },
+
+    returnRejected: {
+      type: Boolean,
+      default: false
+    },
+
+    adminNote: String,
 
     conditionOnReturn: String,
     dueDate: Date

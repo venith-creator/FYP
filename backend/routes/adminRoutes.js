@@ -1,5 +1,7 @@
 import express from "express";
-import { getStudents, createStudent, dashboardStats, createMultipleStudents,  assignCoursesToStudent, getCourseAttendance, getAllAssetLogs, getStudentOverview} from "../controllers/adminController.js";
+import { getStudents, createStudent, dashboardStats, createMultipleStudents,
+      assignCoursesToStudent, getCourseAttendance, getAllAssetLogs, updateStudent,
+      getStudentOverview} from "../controllers/adminController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -7,6 +9,8 @@ const router = express.Router();
 router.get("/dashboard", protect, adminOnly, dashboardStats);
 
 router.get("/students", protect, adminOnly, getStudents);
+
+router.put("/student/:id", protect, adminOnly, updateStudent);
 
 router.post("/create-student", protect, adminOnly, createStudent);
 

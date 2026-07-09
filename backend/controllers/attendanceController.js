@@ -25,8 +25,28 @@ export const scanAttendance = async (req, res) => {
   const { sessionId, code, userLocation } = req.body;
 
   try {
-    const session = await Session.findById(sessionId).populate("course");
 
+    let session;
+
+    if (sessionId) {
+      session =
+        await Session.findById(sessionId)
+          .populate("course");
+    } else {
+      session =
+        await Session.findOne({
+          sessionCode: code,
+          qrExpiresAt: { $gte: new Date() }
+        }).populate("course");
+    }
+
+    if (!session) {
+      return res.status(404).json({
+        message:
+          "No active session found for this code"
+      });
+    }
+    
     if (!session) {
       return res.status(404).json({ message: "Session not found" });
     }
@@ -65,7 +85,7 @@ export const scanAttendance = async (req, res) => {
     // 🚫 prevent duplicate
     const existing = await Attendance.findOne({
       student: req.user._id,
-      session: sessionId
+      session: session._id
     });
 
     if (existing) {
@@ -73,12 +93,15 @@ export const scanAttendance = async (req, res) => {
         message: "Attendance already recorded"
       });
     }
+    console.log("sessionId from body:", sessionId);
+
+    console.log("session found:", session._id);
 
     const attendance = await Attendance.create({
       student: req.user._id,
       course: session.course,
       schedule: session.schedule,
-      session: sessionId
+      session: session._id
     });
 
     res.json({
@@ -100,6 +123,45 @@ export const getSessionAttendance = async (req, res) => {
       .populate("student", "name studentId");
 
     res.json(records);
+  } catch (err) {
+    res.status(500).json(err.message);
+  }
+};
+
+export const getAllAttendance = async (req, res) => {
+  try {
+    const records = await Attendance.find()
+      .populate("student", "name studentId")
+      .populate("course", "courseCode")
+      .populate("session");
+
+    res.json(records);
+
+  } catch (err) {
+    res.status(500).json(err.message);
+  }
+};
+
+export const attendanceAnalytics = async (req, res) => {
+  try {
+
+    const totalAttendance =
+      await Attendance.countDocuments();
+
+    const today = new Date();
+
+    today.setHours(0,0,0,0);
+
+    const attendanceToday =
+      await Attendance.countDocuments({
+        createdAt: { $gte: today }
+      });
+
+    res.json({
+      totalAttendance,
+      attendanceToday
+    });
+
   } catch (err) {
     res.status(500).json(err.message);
   }
