@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 
 // basic pages (you will create these)
 import HomeView from '@/views/HomeView.vue'
@@ -17,7 +17,7 @@ import StudentAttendance from '../views/StudentAttendance.vue'
 import StudentCourses from '../views/StudentCourses.vue'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes: [
     {
       path: '/',
