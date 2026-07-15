@@ -190,13 +190,27 @@ const createWeeklySchedule = async () => {
     const schedule = scheduleRes.data;
 
     const daysMap = {
-        sunday: 0,
-        monday: 1,
-        tuesday: 2,
-        wednesday: 3,
-        thursday: 4,
-        friday: 5,
-        saturday: 6
+          sunday: 0,
+          sun: 0,
+
+          monday: 1,
+          mon: 1,
+
+          tuesday: 2,
+          tue: 2,
+
+          wednesday: 3,
+          wed: 3,
+
+          thursday: 4,
+          thu: 4,
+          thur: 4,
+
+          friday: 5,
+          fri: 5,
+
+          saturday: 6,
+          sat: 6
         };
 
         const targetDay =
@@ -351,13 +365,15 @@ const canGenerateQR = (session) => {
   const start = new Date(session.date);
 
   const [h, m] = session.startTime.split(":");
-
   start.setHours(h, m);
 
-  const minutesBefore =
-    (start - now) / (1000 * 60);
+  const open = new Date(start);
+  open.setMinutes(open.getMinutes() - 30);
 
-  return minutesBefore <= 30;
+  const close = new Date(start);
+  close.setMinutes(close.getMinutes() + 30);
+
+  return now >= open && now <= close;
 };
 
 // =========================
