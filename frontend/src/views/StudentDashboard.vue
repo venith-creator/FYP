@@ -13,7 +13,7 @@ from "../components/student/StudentSidebar.vue";
 import StudentHeader
 from "../components/student/StudentHeader.vue";
 
-import { Html5Qrcode }
+import { Html5QrcodeScanner }
 from "html5-qrcode";
 
 // ======================
@@ -178,7 +178,7 @@ const getLocation = () => {
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 20000,
         maximumAge: 0
       }
     );
@@ -196,17 +196,16 @@ const startScanner = async () => {
       await getLocation();
 
     } catch (err) {
+      console.log(err);
 
       alert("Unable to get your location.");
-
-      return;
 
     }
 
   setTimeout(() => {
 
     const scanner =
-      new Html5Qrcode(
+      new Html5QrcodeScanner(
         {
         fps: 10,
           qrbox: {
