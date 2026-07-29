@@ -1,12 +1,12 @@
 import QRCode from "qrcode";
 
 const generateQR = async (data) => {
-  try {
-    const qr = await QRCode.toDataURL(data);
-    return qr;
-  } catch (error) {
-    console.error(error);
-  }
+  return await QRCode.toDataURL(data, {
+    errorCorrectionLevel: "H",
+    margin: 2,
+    width: 500
+  });
 };
+
 
 export default generateQR;

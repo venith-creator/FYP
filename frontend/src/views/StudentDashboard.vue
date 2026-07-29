@@ -13,7 +13,7 @@ from "../components/student/StudentSidebar.vue";
 import StudentHeader
 from "../components/student/StudentHeader.vue";
 
-import { Html5QrcodeScanner }
+import { Html5Qrcode }
 from "html5-qrcode";
 
 // ======================
@@ -155,43 +155,66 @@ const attendanceCount =
   });
 let hasScanned = false;
 
-const startScanner = () => {
+const getLocation = () => {
+  return new Promise((resolve, reject) => {
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+
+        currentLocation.value = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
+
+        resolve();
+
+      },
+      (err) => {
+
+        console.log(err);
+
+        reject(err);
+
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+
+  });
+};
+
+const startScanner = async () => {
 
   scannerOpen.value = true;
   currentLocation.value = null;
 
-  navigator.geolocation.getCurrentPosition(
-  (pos) => {
-    currentLocation.value = {
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude
-    };
-  },
-  () => {
-    alert("Unable to get your location.");
-  },
-  {
-    enableHighAccuracy: true,
-    timeout: 5000,
-    maximumAge: 0
-  }
-);
+  try {
+
+      await getLocation();
+
+    } catch (err) {
+
+      alert("Unable to get your location.");
+
+      return;
+
+    }
 
   setTimeout(() => {
 
     const scanner =
-      new Html5QrcodeScanner(
-        "reader",
+      new Html5Qrcode(
         {
-          fps: 20,
-          qrbox: (viewfinderWidth, viewfinderHeight) => {
-            const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.7;
-
-            return {
-              width: size,
-              height: size
-            };
-          }
+        fps: 10,
+          qrbox: {
+            width: 250,
+            height: 250
+          },
+          rememberLastUsedCamera: true,
+          aspectRatio: 1
         },
         false
       );
@@ -199,6 +222,7 @@ const startScanner = () => {
       hasScanned = false;
     scanner.render(
       async (decodedText) => {
+        console.log("QR READ:", decodedText);
 
          if (hasScanned) return;
 
@@ -207,6 +231,7 @@ const startScanner = () => {
 
           const parsed =
             JSON.parse(decodedText);
+            console.log(parsed);
 
           scannedSession.value =
             parsed;
@@ -226,10 +251,14 @@ const startScanner = () => {
 
         } catch (err) {
           console.log(err);
-          alert("Invalid QR");
+           console.log(decodedText);
+          alert("QR was detected but the data inside it is invalid.");
         }
       },
-      (err) => {}
+  
+      (error) => {
+        console.log(error);
+      }
     );
 
   }, 200);
