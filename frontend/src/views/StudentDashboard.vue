@@ -39,7 +39,7 @@ const assetTag = ref("");
 const returnTag = ref("");
 
 const loading = ref(false);
-
+const currentLocation = ref(null);
 // ======================
 // FETCH
 // ======================
@@ -153,9 +153,29 @@ const attendanceCount =
   computed(() => {
     return attendance.value.length;
   });
+let hasScanned = false;
+
 const startScanner = () => {
 
   scannerOpen.value = true;
+  currentLocation.value = null;
+
+  navigator.geolocation.getCurrentPosition(
+  (pos) => {
+    currentLocation.value = {
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude
+    };
+  },
+  () => {
+    alert("Unable to get your location.");
+  },
+  {
+    enableHighAccuracy: true,
+    timeout: 5000,
+    maximumAge: 0
+  }
+);
 
   setTimeout(() => {
 
@@ -163,15 +183,26 @@ const startScanner = () => {
       new Html5QrcodeScanner(
         "reader",
         {
-          fps: 10,
-          qrbox: 250
+          fps: 20,
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.7;
+
+            return {
+              width: size,
+              height: size
+            };
+          }
         },
         false
       );
 
+      hasScanned = false;
     scanner.render(
       async (decodedText) => {
 
+         if (hasScanned) return;
+
+         hasScanned = true;
         try {
 
           const parsed =
@@ -183,23 +214,22 @@ const startScanner = () => {
           attendanceCode.value =
             parsed.code;
 
+            
+          await scanner.clear();
+
+          scannerOpen.value = false;
+
           await submitAttendance(
             parsed.sessionId,
             parsed.code
           );
-
-          scanner.clear();
-
-          scannerOpen.value = false;
 
         } catch (err) {
           console.log(err);
           alert("Invalid QR");
         }
       },
-      (err) => {
-        console.log(err);
-      }
+      (err) => {}
     );
 
   }, 200);
@@ -207,54 +237,46 @@ const startScanner = () => {
 // ======================
 // ATTENDANCE ACTION
 // ======================
-const submitAttendance =
-  async (
-    sessionIdFromQR = null,
+const submitAttendance = async (
+  sessionIdFromQR = null,
   codeFromQR = null
-  ) => {
+) => {
 
-    if (!attendanceCode.value) return;
+  if (!attendanceCode.value) return;
 
-    try {
+  if (!currentLocation.value) {
+    return alert("Waiting for GPS location...");
+  }
 
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
+  try {
 
-          await API.post(
-            "/attendance/scan",
-            {
-                sessionId:
-                sessionIdFromQR,
+    await API.post(
+      "/attendance/scan",
+      {
+        sessionId: sessionIdFromQR,
+        code: codeFromQR || attendanceCode.value,
+        userLocation: currentLocation.value
+      }
+    );
 
-              code:
-              codeFromQR ||
-                attendanceCode.value,
-              userLocation: {
-                lat:
-                  pos.coords.latitude,
-                lng:
-                  pos.coords.longitude
-              }
-            }
-          );
+    alert("Attendance recorded");
 
-          alert(
-            "Attendance recorded"
-          );
+    attendanceCode.value = "";
 
-          attendanceCode.value = "";
+    fetchData();
 
-          fetchData();
-        }
-      );
+  } catch (err) {
 
-    } catch (err) {
-      console.log(err);
-      alert(
-        err.response?.data?.message
-      );
-    }
-  };
+    console.log(err);
+
+    alert(
+      err.response?.data?.message ||
+      "Failed to record attendance"
+    );
+
+  }
+
+};
 </script>
 
 <template>
