@@ -206,6 +206,7 @@ const startScanner = async () => {
 
     const scanner =
       new Html5QrcodeScanner(
+        "reader",
         {
         fps: 10,
           qrbox: {
