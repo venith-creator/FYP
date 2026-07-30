@@ -68,7 +68,7 @@ export const scanAttendance = async (req, res) => {
 
     console.log("distance =", distance);
 
-    if (distance > 100) {
+    if (distance > 500) {
       return res.status(403).json({
         message: "You are not within class location"
       });
