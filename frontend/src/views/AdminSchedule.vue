@@ -424,7 +424,7 @@ const printQR = (session) => {
 
         <img
           src="${session.qrCode}"
-          style="width:220px;margin-top:20px;"
+          style="width:350px;margin-top:20px;"
         />
 
         <h1 style="margin-top:20px;">
@@ -989,7 +989,7 @@ const addNote = async () => {
 
               <img
                 :src="session.qrCode"
-                class="w-40 mx-auto rounded-xl"
+                class="w-72 mx-auto "
               />
 
               <h2

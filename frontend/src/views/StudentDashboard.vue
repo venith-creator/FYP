@@ -39,7 +39,7 @@ const assetTag = ref("");
 const returnTag = ref("");
 
 const loading = ref(false);
-const currentLocation = ref(null);
+
 // ======================
 // FETCH
 // ======================
@@ -153,54 +153,9 @@ const attendanceCount =
   computed(() => {
     return attendance.value.length;
   });
-let hasScanned = false;
-
-const getLocation = () => {
-  return new Promise((resolve, reject) => {
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-
-        currentLocation.value = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude
-        };
-
-        resolve();
-
-      },
-      (err) => {
-
-        console.log(err);
-
-        reject(err);
-
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 20000,
-        maximumAge: 0
-      }
-    );
-
-  });
-};
-
-const startScanner = async () => {
+const startScanner = () => {
 
   scannerOpen.value = true;
-  currentLocation.value = null;
-
-  try {
-
-      await getLocation();
-
-    } catch (err) {
-      console.log(err);
-
-      alert("Unable to get your location.");
-
-    }
 
   setTimeout(() => {
 
@@ -208,30 +163,19 @@ const startScanner = async () => {
       new Html5QrcodeScanner(
         "reader",
         {
-        fps: 10,
-          qrbox: {
-            width: 250,
-            height: 250
-          },
-          rememberLastUsedCamera: true,
-          aspectRatio: 1
+          fps: 10,
+          qrbox: 250
         },
         false
       );
 
-      hasScanned = false;
     scanner.render(
       async (decodedText) => {
-        console.log("QR READ:", decodedText);
 
-         if (hasScanned) return;
-
-         hasScanned = true;
         try {
 
           const parsed =
             JSON.parse(decodedText);
-            console.log(parsed);
 
           scannedSession.value =
             parsed;
@@ -239,25 +183,22 @@ const startScanner = async () => {
           attendanceCode.value =
             parsed.code;
 
-            
-          await scanner.clear();
-
-          scannerOpen.value = false;
-
           await submitAttendance(
             parsed.sessionId,
             parsed.code
           );
 
+          scanner.clear();
+
+          scannerOpen.value = false;
+
         } catch (err) {
           console.log(err);
-           console.log(decodedText);
-          alert("QR was detected but the data inside it is invalid.");
+          alert("Invalid QR");
         }
       },
-  
-      (error) => {
-        console.log(error);
+      (err) => {
+        console.log(err);
       }
     );
 
@@ -266,44 +207,113 @@ const startScanner = async () => {
 // ======================
 // ATTENDANCE ACTION
 // ======================
-const submitAttendance = async (
+/*const submitAttendance =
+  async (
+    sessionIdFromQR = null,
+  codeFromQR = null
+  ) => {
+
+    if (!attendanceCode.value) return;
+
+    try {
+
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+
+          await API.post(
+            "/attendance/scan",
+            {
+                sessionId:
+                sessionIdFromQR,
+
+              code:
+              codeFromQR ||
+                attendanceCode.value,
+              userLocation: {
+                lat:
+                  pos.coords.latitude,
+                lng:
+                  pos.coords.longitude
+              }
+            }
+          );
+
+          alert(
+            "Attendance recorded"
+          );
+
+          attendanceCode.value = "";
+
+          fetchData();
+        }
+      );
+
+    } catch (err) {
+      console.log(err);
+      alert(
+        err.response?.data?.message
+      );
+    }
+  };*/
+  const submitAttendance = async (
   sessionIdFromQR = null,
   codeFromQR = null
 ) => {
 
   if (!attendanceCode.value) return;
 
-  if (!currentLocation.value) {
-    return alert("Waiting for GPS location...");
-  }
+  navigator.geolocation.getCurrentPosition(
 
-  try {
+    async (pos) => {
 
-    await API.post(
-      "/attendance/scan",
-      {
-        sessionId: sessionIdFromQR,
-        code: codeFromQR || attendanceCode.value,
-        userLocation: currentLocation.value
+      try {
+
+        await API.post(
+          "/attendance/scan",
+          {
+            sessionId: sessionIdFromQR,
+            code: codeFromQR || attendanceCode.value,
+            userLocation: {
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude
+            }
+          }
+        );
+
+        alert("Attendance recorded");
+
+        attendanceCode.value = "";
+
+        fetchData();
+
+      } catch (err) {
+
+        console.log(err);
+
+        alert(
+          err.response?.data?.message ||
+          "Failed to record attendance."
+        );
+
       }
-    );
 
-    alert("Attendance recorded");
+    },
 
-    attendanceCode.value = "";
+    () => {
 
-    fetchData();
+      alert(
+        "Unable to get your current location."
+      );
 
-  } catch (err) {
+    },
 
-    console.log(err);
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }
 
-    alert(
-      err.response?.data?.message ||
-      "Failed to record attendance"
-    );
-
-  }
+  );
 
 };
 </script>
