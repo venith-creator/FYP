@@ -62,7 +62,11 @@ export const scanAttendance = async (req, res) => {
     }
 
     // 📍 location validation
+    console.log("userLocation", userLocation);
+    console.log("session.location", session.location);
     const distance = getDistance(userLocation, session.location);
+
+    console.log("distance =", distance);
 
     if (distance > 100) {
       return res.status(403).json({
