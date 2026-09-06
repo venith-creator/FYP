@@ -1022,9 +1022,10 @@ The system is therefore more than a simple QR scanner. It demonstrates the desig
 ### Student Dashboard
 
 <img 
-  src="./images/student-dashboard.png" 
+  src="./images/student dashboard.png" 
   alt="Student Dashboard" 
   width="800"
+  height="800"
 />
 
 ### QR Attendance Scanner
@@ -1033,21 +1034,25 @@ The system is therefore more than a simple QR scanner. It demonstrates the desig
   src="./images/qr-scanner.png" 
   alt="QR Attendance Scanner" 
   width="800"
+  height="800"
 />
 
 ### Admin Dashboard
 
 <img 
-  src="./images/admin-dashboard.png" 
+  src="./images/Admin Dashboard.png" 
   alt="Admin Dashboard" 
   width="800"
+  height="800"
 />
 
 ### Asset Management
 
 <img 
-  src="./images/asset-management.png" 
+  src="./images/Admin Assets page.png" 
   alt="Asset Management"
+  width="800"
+  height="800"
 />
 
 ---
